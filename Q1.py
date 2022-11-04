@@ -24,7 +24,7 @@ def mse(y, x, w, dim):
                     [(1 + 2*(x2) + 3*(x2)^2) - y2]^2
                         }
     """
-    y_prime = calc(x,w,dim)
+    y_prime = calc_poly(x,w,dim)
 
     # check shape of y and y':
     if(np.array(y).size == np.array(y_prime).size):
@@ -32,7 +32,7 @@ def mse(y, x, w, dim):
     else:
         return 0
 
-def calc(x,w,dim):
+def calc_poly(x,w,dim):
     """
     calculate, with given dimension, the value of y' = w0 + w1 * x + w2 * x^2 + ...
     
@@ -55,6 +55,53 @@ def calc(x,w,dim):
     for i in range (0,dim):
         y_prime += pow(x,i) * w[i]
     return y_prime
+
+def calc_sin(x,w,dim):
+    """
+    calculate, with given dimension, the value of y' = w0 + w1 * sin(pi x) + w2 * sin(2pi x) + ...
+    
+    x: an array of attribute value
+    dim: int, dimension
+    w: an array of weights of each power of x
+
+    e.g. 
+        x = [x1,x2,x3]
+        dim = 3
+        w = [w0,w1,w2]
+    """
+    # check if w matches the dimension
+    if(np.array(w).size != dim):
+        print("w: ", w, "dim = ", dim, "dimension does not match")
+        return 0
+
+    # continue if dimension is correct
+    y_prime = 0
+    for i in range (0,dim):
+        y_prime += sin(x,i+1) * w[i]
+    return y_prime
+
+def mse_sin(y,x,w,dim):
+    """
+    This function computes the mean squared error between the sinfit outcome and y, given the bases dimension,
+    for x with a single attribute
+
+    x: an array of attribute value
+    y: an array of sampled 'outcome'
+    w: an array of weights of each power of x
+    dim: int, the dimension (degree of polynomial + 1)
+
+    e.g.    x = [x1,x2]
+            y = [y1,y2]
+            dim = 3
+            w = [1,2,3]
+    """
+    y_prime = calc_sin(x,w,dim)
+
+    # check shape of y and y':
+    if(np.array(y).size == np.array(y_prime).size):
+        return ((y-y_prime)**2).mean(axis=0)
+    else:
+        return 0
 
 def gd(shape, data, rate, max_iteration, small = 0.1):
     print("gd: ")
@@ -118,16 +165,49 @@ def knr_separate(x: np.array, y: np.array, n):
     #print("k = ", n, ": ", w)
     return w.reshape(n,1)
 
-
-def sin_square(x, sigma):
+def knr_sin(x: np.array, y: np.array, n):
     """
-    calculate the function g(x) = sin^2(2 * Pi * X) + epsilon(normal noise)
+    Fit the x, y given with base dimension n as sin(n pi x)
+
+    data: combination(array) of x and y value as coordinates
+    n: dimension
+
+    e.g. x = [x1,x2,x3]
+         y = [y1,y2,y3]
+         n = 2
+    """
+    x = np.array(x)
+    x = x.reshape(x.size,1)
+    y = np.array(y)
+    y =  y.reshape(y.size,1)
+
+    bias = sin(x,1)
+    x_train = bias
+
+    for i in range(1, n):
+        x_more = sin(x,i+1)
+        x_train = np.concatenate((x_train, x_more), axis = 1)
+
+    w = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(x_train), x_train)), np.transpose(x_train)), y)
+    #print("k = ", n, ": ", w)
+    return w.reshape(n,1)
+
+def sin(x, k):
+    """
+    Calculate sin(k pi x)
+    """
+    return np.sin(k*np.pi*x)
+
+def sin_square(x, sigma, k = 2):
+    """
+    calculate the function g(x) = sin^2(k * Pi * X) + epsilon(normal noise)
     mean = 0;
     sigma = int, standard deviation
     x: array
+    k; integer
 
     """
-    return pow((np.sin(2*np.pi*x)),2) + np.random.normal(0, pow(sigma,2))
+    return pow((np.sin(k*np.pi*x)),2) + np.random.normal(0, pow(sigma,2))
 
 def initialize_data(size:int, sigma:int):
     """
@@ -161,10 +241,10 @@ def plot_graph():
     w3 = knr(training, 3)
     w4 = knr(training, 4)
 
-    y1 = calc(x, w1, 1)
-    y2 = calc(x, w2, 2)
-    y3 = calc(x, w3, 3)
-    y4 = calc(x, w4, 4)
+    y1 = calc_poly(x, w1, 1)
+    y2 = calc_poly(x, w2, 2)
+    y3 = calc_poly(x, w3, 3)
+    y4 = calc_poly(x, w4, 4)
 
     # plotting the fitted curves
     print("Q1 (a): ")
@@ -234,11 +314,11 @@ def fitting_sin():
     w14 = knr_separate(x,y,14)
     w18 = knr_separate(x,y,18)
 
-    y2 = calc(x_plot,w2,2)
-    y5 = calc(x_plot,w5,5)
-    y10 = calc(x_plot,w10,10)
-    y14 = calc(x_plot,w14,14)
-    y18 = calc(x_plot,w18,18)
+    y2 = calc_poly(x_plot,w2,2)
+    y5 = calc_poly(x_plot,w5,5)
+    y10 = calc_poly(x_plot,w10,10)
+    y14 = calc_poly(x_plot,w14,14)
+    y18 = calc_poly(x_plot,w18,18)
 
     plt.xlabel("X axis")
     plt.ylabel("Y axis")
@@ -333,6 +413,81 @@ def hundred_iter():
     plt.plot(dim, mean_test_err, color ="blue")
     plt.xlabel("dimension")
     plt.ylabel("MSE")
-    plt.title("natural log of averaged general mse in 1000 trials wrt dimension")
+    plt.title("natural log of averaged general mse in 100 trials wrt dimension")
     print("Q2 (d): ")
     plt.show()
+
+def sin_basis():
+    """
+    Q3
+    """
+    # generate points
+    x, y = initialize_data(30, 0.07)
+
+    # computing the mse in a loop
+    dim = np.arange(1,19)
+    err = []
+    for i in dim:
+        w = knr_sin(x,y,i)
+        err.append(np.log(mse_sin(y,np.array(x),w,i)))
+    
+    plt.plot(dim, err, color ="red")
+    plt.xlabel("dimension")
+    plt.ylabel("ln(MSE)")
+    plt.title("natural log of training MSE wrt Dimension sin(k pi x)")
+    print("Q3 (b): ")
+    plt.show()
+
+    # generate the test and training data
+    x_train, y_train = initialize_data(30, 0.07)
+    x_test, y_test = initialize_data(1000, 0.07)
+    # clear err
+    err = []
+    for i in dim:
+        w = knr_sin(x_train,y_train,i)
+        err.append(np.log(mse_sin(y_test,np.array(x_test),w,i)))
+    
+    #plotting test error
+    plt.plot(dim, err, color ="red")
+    plt.xlabel("dimension")
+    plt.ylabel("ln(MSE)")
+    plt.title("natural log of general MSE wrt Dimension sin(k pi x)")
+    print("Q3 (c): ")
+    plt.show()
+
+    # a container for all iterations of train and test error
+    all_train_err = []
+    all_test_err = []
+    for iter in range(0,100):
+        print("Iteration ", iter)
+        x_train, y_train = initialize_data(30, 0.07)
+        x_test, y_test = initialize_data(1000, 0.07)
+        dim = np.arange(1,19)
+        train_err = []
+        test_err = []
+        for i in dim:
+            # calculating the train/test error for each dimension
+            w = knr_sin(x_train,y_train,i)
+            train_err.append(np.log(mse_sin(y_train,np.array(x_train),w,i)))
+            test_err.append(np.log(mse_sin(y_test,np.array(x_test),w,i)))
+
+        # stacking the new row of errors on bottom
+        if(iter == 0):
+            all_train_err = train_err
+            all_test_err = test_err
+        else:
+            all_train_err = np.vstack((all_train_err, train_err))
+            all_test_err = np.vstack((all_test_err, test_err))
+
+    # calculating the mean for each column
+    mean_train_err = np.mean(all_train_err, axis = 0)
+    mean_test_err = np.mean(all_test_err, axis = 0)
+
+    plt.plot(dim, mean_train_err, color ="red")
+    plt.plot(dim, mean_test_err, color ="blue")
+    plt.xlabel("dimension")
+    plt.ylabel("MSE")
+    plt.title("natural log of averaged general mse in 100 trials wrt dimension sin(k pi x)")
+    print("Q3 (d): ")
+    plt.show()
+    
