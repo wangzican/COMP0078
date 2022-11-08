@@ -1,11 +1,13 @@
 from typing import List, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 training = np.array([[1,3],[2,2],[3,0],[4,5]])
 
-def mse(y, x, w, dim):
+# helper functions
+def mse(y, x, w, dim=0):
     """
     This function computes the mean squared error between the polyfit outcome and y, given the bases dimension,
     for x with a single attribute
@@ -24,8 +26,13 @@ def mse(y, x, w, dim):
                     [(1 + 2*(x2) + 3*(x2)^2) - y2]^2
                         }
     """
-    y_prime = calc_poly(x,w,dim)
-
+    # dimension not sepecified -> use calc_multi
+    if dim == 0:
+        y_prime = calc_multi(x,w)
+    else:
+        # if dimension specified
+        y_prime = calc_poly(x,w,dim)
+    
     # check shape of y and y':
     if(np.array(y).size == np.array(y_prime).size):
         return ((y-y_prime)**2).mean(axis=0)
@@ -52,8 +59,35 @@ def calc_poly(x,w,dim):
 
     # continue if dimension is correct
     y_prime = 0
+
+    # calculate for each dimension
     for i in range (0,dim):
         y_prime += pow(x,i) * w[i]
+    return y_prime
+
+def calc_multi(x,w):
+    """
+    calculate, with multiple attributes dimension one, the value of y' = w0 + w1 * x1 + w2 * x2 + ...
+    
+    x: an array of attribute value
+    w: an array of weights of each attribute of x
+
+    e.g. 
+        x = [[x11,x12,x13],
+             [x21,x22,x23],
+             [x31,x32,x33]]
+        w = [w0,w1,w2]
+    """
+    if x.ndim == 1:
+        x = x.reshape(x.size, 1)
+
+    # sometimes we need to add an bias column
+    if x.shape[1] != w.shape[0]:
+        x = np.hstack((np.ones((x.shape[0], 1)),x))
+
+    # calculating y'
+    y_prime = np.dot(x,w)
+
     return y_prime
 
 def calc_sin(x,w,dim):
@@ -125,16 +159,20 @@ def knr(data, n):
     e.g. data = [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
          n = 2
     """
+    # prepares data
     x_train = np.transpose(data)[0].reshape(4,1)
+    y = np.transpose(data)[1].reshape(4,1)
+
+    # adding bias term
     bias = np.full((4,1), 1)
     x = bias
 
+    # add each dimension
     for i in range(1, n):
         x_more = np.power(x_train, i)
         x = np.concatenate((x, x_more), axis = 1)
 
-
-    y = np.transpose(data)[1].reshape(4,1)
+    # using w = (x^T x)^-1 x^T y
     w = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(x), x)), np.transpose(x)), y)
     return w.reshape(n,1)
 
@@ -149,21 +187,26 @@ def knr_separate(x: np.array, y: np.array, n):
          y = [y1,y2,y3]
          n = 2
     """
-    x = np.array(x)
-    x = x.reshape(x.size,1)
-    y = np.array(y)
-    y =  y.reshape(y.size,1)
 
-    bias = np.full((x.size, 1), 1)
+    # prepares data, fill in the dimension
+    x = np.array(x)
+    y = np.array(y)
+    if(x.ndim == 1):
+        x = x.reshape(x.size,1)
+        y =  y.reshape(y.size,1)
+
+    #adding bias term of ones, with the same size as number of samples
+    bias = np.full((x.shape[0], 1), 1)
     x_train = bias
 
     for i in range(1, n):
         x_more = np.power(x, i)
         x_train = np.concatenate((x_train, x_more), axis = 1)
 
+    # using the equation
     w = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(x_train), x_train)), np.transpose(x_train)), y)
     #print("k = ", n, ": ", w)
-    return w.reshape(n,1)
+    return w.reshape(w.size,1)
 
 def knr_sin(x: np.array, y: np.array, n):
     """
@@ -176,18 +219,20 @@ def knr_sin(x: np.array, y: np.array, n):
          y = [y1,y2,y3]
          n = 2
     """
+    # prepares data
     x = np.array(x)
     x = x.reshape(x.size,1)
     y = np.array(y)
     y =  y.reshape(y.size,1)
 
-    bias = sin(x,1)
-    x_train = bias
+    # first term of sin(pi x) to set dimension
+    x_train = sin(x,1)
 
     for i in range(1, n):
         x_more = sin(x,i+1)
         x_train = np.concatenate((x_train, x_more), axis = 1)
 
+    # using the equation
     w = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(x_train), x_train)), np.transpose(x_train)), y)
     #print("k = ", n, ": ", w)
     return w.reshape(n,1)
@@ -224,6 +269,33 @@ def initialize_data(size:int, sigma:int):
         y.append(sin_square(random, sigma))
     return x,y
 
+def train_test_split(dataset, ratio):
+    """
+    Split the data randomly to two sets with a given ratio
+
+    dataset: dataframe
+    ratio: float
+    """
+    # turn datafram to list for faster computation
+    test = dataset.values.tolist()
+    train = list()
+    # get expected size of train_Set
+    train_size = int(ratio * len(dataset))
+
+    # pop from the list, the rest are tests
+    while len(train) < train_size:
+        index = np.random.randint(0,len(test))
+        train.append(test.pop(index))
+    
+    # convert back to dataframes
+    train = pd.DataFrame(train)
+    test = pd.DataFrame(test)
+    # add the column names back
+    train.columns = dataset.columns
+    test.columns = dataset.columns
+    return train, test
+
+# Section 1.1
 def plot_graph():
     """
         Q1
@@ -385,7 +457,7 @@ def hundred_iter():
     all_train_err = []
     all_test_err = []
     for iter in range(0,100):
-        print("Iteration ", iter)
+        #print("Iteration ", iter)
         x_train, y_train = initialize_data(30, 0.07)
         x_test, y_test = initialize_data(1000, 0.07)
         dim = np.arange(1,19)
@@ -459,7 +531,7 @@ def sin_basis():
     all_train_err = []
     all_test_err = []
     for iter in range(0,100):
-        print("Iteration ", iter)
+        #print("Iteration ", iter)
         x_train, y_train = initialize_data(30, 0.07)
         x_test, y_test = initialize_data(1000, 0.07)
         dim = np.arange(1,19)
@@ -491,3 +563,111 @@ def sin_basis():
     print("Q3 (d): ")
     plt.show()
     
+# Section 1.2
+def naive_regression():
+    """
+    Q4, (a)
+    """
+    data = pd.read_csv('Boston-filtered.csv')
+    iteration = 20
+    total_training_mse = 0
+    total_testing_mse = 0
+    for i in range(0,iteration):
+        #prepare the data
+        train, test = train_test_split(data, 0.33)
+        y_train = np.array(train.iloc[:, 12:13])
+        y_test = np.array(test.iloc[:, 12:13])
+
+        # prepare using ones
+        x_test = np.ones(test.iloc[:, 0:12].shape[0])
+        x_train = np.ones(train.iloc[:, 0:12].shape[0])
+
+        #fitting
+        w = knr_separate(x_train, y_train, 1)
+        
+        training_mse = mse(y_train, x_train, w)
+        testing_mse = mse(y_test, x_test, w)
+
+        total_training_mse += training_mse
+        total_testing_mse += testing_mse
+
+    mean_training_mse = total_training_mse/iteration
+    mean_testing_mse = total_testing_mse/iteration
+    
+    print("Q4, (a): ")
+    print("training loss is: ", mean_training_mse)
+    print("testing loss is: ", mean_testing_mse)
+    print("Q4, (b): w is the mean of the training y values.")
+
+def single_attribute():
+    """
+    Q4, (c)
+    """
+    data = pd.read_csv('Boston-filtered.csv')
+    iteration = 20
+    total_training_mse = 0
+    total_testing_mse = 0
+
+    print("Q4, (c): ")
+    # loop for each attribute
+    for attributes in range(0,12):
+        # loop for 20 iterations
+        for i in range(0,iteration):
+            train, test = train_test_split(data, 0.33)
+            y_train = np.array(train.iloc[:, 12:13])
+            y_test = np.array(test.iloc[:, 12:13])
+
+            # prepare using one attribute
+            x_test = np.array(test.iloc[:, attributes:attributes + 1])
+            x_train = np.array(train.iloc[:, attributes:attributes + 1])
+
+            # dim = 2 means using the ones and the actual value
+            w = knr_separate(x_train, y_train, 2)
+            
+            training_mse = mse(y_train, x_train, w)
+            testing_mse = mse(y_test, x_test, w)
+
+            total_training_mse += training_mse
+            total_testing_mse += testing_mse
+
+        mean_training_mse = total_training_mse/iteration
+        mean_testing_mse = total_testing_mse/iteration
+
+        print("for attribute ", train.columns[attributes])
+        print("training loss is: ", mean_training_mse)
+        print("testing loss is: ", mean_testing_mse)
+        
+def all_attributes():
+    """
+    Q4, (d)
+    """
+    data = pd.read_csv('Boston-filtered.csv')
+    iteration = 20
+    total_training_mse = 0
+    total_testing_mse = 0
+    for i in range(0,iteration):
+        #prepare the data
+        train, test = train_test_split(data, 0.33)
+        x_train = np.array(train.iloc[:, 0:12])
+        y_train = np.array(train.iloc[:, 12:13])
+        x_test = np.array(test.iloc[:, 0:12])
+        y_test = np.array(test.iloc[:, 12:13])
+        
+        # dim = 2 means using the ones and the actual value
+        w = knr_separate(x_train, y_train, 2)
+        
+        training_mse = mse(y_train, x_train, w)
+        testing_mse = mse(y_test, x_test, w)
+
+        total_training_mse += training_mse
+        total_testing_mse += testing_mse
+
+    mean_training_mse = total_training_mse/iteration
+    mean_testing_mse = total_testing_mse/iteration
+    
+    print("Q4, (d): ")
+    print("training loss is: ", mean_training_mse)
+    print("testing loss is: ", mean_testing_mse)
+
+
+# Section 1.3
