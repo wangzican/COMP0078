@@ -7,7 +7,16 @@ import pandas as pd
 training = np.array([[1,3],[2,2],[3,0],[4,5]])
 
 # helper functions
-def mse(y, x, w, dim=0):
+def mse(y, y_prime):
+    """
+    This function computes the mean squared error between y_prime and y
+
+    y: an array of sampled 'outcome'
+    y_prime: an array of calculated outcome
+    """
+    return ((y-y_prime)**2).mean(axis=0)
+
+def mse_poly(y, x, w, dim=0):
     """
     This function computes the mean squared error between the polyfit outcome and y, given the bases dimension,
     for x with a single attribute
@@ -149,7 +158,7 @@ def gd(shape, data, rate, max_iteration, small = 0.1):
             break    
 
 
-def knr(data, n):
+def lrn(data, n):
     """
     Fit the data given with base dimension n:
 
@@ -173,10 +182,10 @@ def knr(data, n):
         x = np.concatenate((x, x_more), axis = 1)
 
     # using w = (x^T x)^-1 x^T y
-    w = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(x), x)), np.transpose(x)), y)
+    w = np.dot(np.dot(np.linalg.pinv(np.dot(np.transpose(x), x)), np.transpose(x)), y)
     return w.reshape(n,1)
 
-def knr_separate(x: np.array, y: np.array, n):
+def lrn_separate(x: np.array, y: np.array, n):
     """
     Fit the x, y given with base dimension n:
 
@@ -204,11 +213,11 @@ def knr_separate(x: np.array, y: np.array, n):
         x_train = np.concatenate((x_train, x_more), axis = 1)
 
     # using the equation
-    w = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(x_train), x_train)), np.transpose(x_train)), y)
+    w = np.dot(np.dot(np.linalg.pinv(np.dot(np.transpose(x_train), x_train)), np.transpose(x_train)), y)
     #print("k = ", n, ": ", w)
     return w.reshape(w.size,1)
 
-def knr_sin(x: np.array, y: np.array, n):
+def lrn_sin(x: np.array, y: np.array, n):
     """
     Fit the x, y given with base dimension n as sin(n pi x)
 
@@ -233,7 +242,7 @@ def knr_sin(x: np.array, y: np.array, n):
         x_train = np.concatenate((x_train, x_more), axis = 1)
 
     # using the equation
-    w = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(x_train), x_train)), np.transpose(x_train)), y)
+    w = np.dot(np.dot(np.linalg.pinv(np.dot(np.transpose(x_train), x_train)), np.transpose(x_train)), y)
     #print("k = ", n, ": ", w)
     return w.reshape(n,1)
 
@@ -274,9 +283,9 @@ def train_test_split(dataset, ratio):
     Split the data randomly to two sets with a given ratio
 
     dataset: dataframe
-    ratio: float
+    ratio: float = train/whole
     """
-    # turn datafram to list for faster computation
+    # turn dataframe to list for faster computation
     test = dataset.values.tolist()
     train = list()
     # get expected size of train_Set
@@ -295,6 +304,99 @@ def train_test_split(dataset, ratio):
     test.columns = dataset.columns
     return train, test
 
+def n_fold(dataset, n):
+    """
+    Returns n sets randomly poped from a dataframe that are equally sized,
+    for cross-validation
+
+    returns:
+    sets: [[training, validation],
+           [training, validation],
+           [training, validation]]
+    """
+    sets = []
+    validations = []
+    
+    rest = dataset
+    # get the validation set
+    for i in range(0,n-1):
+        validation, rest = train_test_split(rest, 1/(n-i))
+        validation = np.array(validation)
+        validations.append(validation)
+    validations.append(np.array(rest))
+
+    # get the corresponding training set
+    for index in range(0, len(validations)):
+        validation = validations[index]
+        whole = validations.copy()
+        whole.pop(index)
+        training = np.vstack(whole)
+        sets.append([pd.DataFrame(training), pd.DataFrame(validation)])
+
+    return sets
+
+def gaussian(x1, x2, sigma):
+    """
+    calculate the gaussian kernel for one set of data
+    """
+    return np.exp( - np.linalg.norm(x1 - x2)**2 / (2 * sigma**2))
+
+def calc_gaussian(x, xt, a, sigma):
+    """
+    Returns the y' of x1 and xt when given x, x_test, a* and sigma
+    x: [[x1],
+        [x2],
+        [x3]]
+    """
+    # get shapes
+    rows = xt.shape[0]
+    y_prime = np.zeros(shape = (rows,1))
+    # for each x_test
+    index = 0
+    for tests in xt:
+        # for each x
+        train_index = 0
+        for trains in x:
+            #print(a[index])
+            y_prime[index] += a[train_index] * gaussian(trains, tests, sigma)
+            train_index += 1
+        index += 1
+    return y_prime
+
+def gaussian_kernel(x, sigma):
+    """
+    Returns the gaussian kernel of x1 and xt when given only x and sigma
+    x: [[x1],
+        [x2],
+        [x3]]
+    """
+    # get shapes
+    rows = x.shape[0]
+
+    kernel = np.zeros(shape = (rows,rows))
+    # for each x1
+    i = 0
+    for ki in x:
+        #for each x2
+        j = 0
+        for kj in x:
+            kernel[i,j] = gaussian(ki,kj,sigma)
+            j+=1
+        i+=1
+    return kernel
+
+def kernel_ridge(x, y, sigma, gamma):
+    """
+    Performs kernel ridge regression 
+    """
+    # prepares kernel and I
+    kernel = gaussian_kernel(x,sigma)
+    I = np.identity(kernel.shape[0])
+
+    # apply function
+    a_star = np.dot(np.linalg.pinv(kernel + kernel.shape[0] * gamma * I),  y)
+    return a_star
+
 # Section 1.1
 def plot_graph():
     """
@@ -308,10 +410,10 @@ def plot_graph():
 
     # training the data with different dimensions
     x = np.linspace(1,5,50)
-    w1 = knr(training,1)
-    w2 = knr(training, 2)
-    w3 = knr(training, 3)
-    w4 = knr(training, 4)
+    w1 = lrn(training,1)
+    w2 = lrn(training, 2)
+    w3 = lrn(training, 3)
+    w4 = lrn(training, 4)
 
     y1 = calc_poly(x, w1, 1)
     y2 = calc_poly(x, w2, 2)
@@ -339,10 +441,10 @@ def plot_graph():
 
     # output the mse of the respective function
     print("Q1 (c): ")
-    print("k = 1: ", mse(transposed_data[1], transposed_data[0], w1, 1))
-    print("k = 2: ", mse(transposed_data[1], transposed_data[0], w2, 2))
-    print("k = 3: ", mse(transposed_data[1], transposed_data[0], w3, 3))
-    print("k = 4: ", mse(transposed_data[1], transposed_data[0], w4, 4))
+    print("k = 1: ", mse_poly(transposed_data[1], transposed_data[0], w1, 1))
+    print("k = 2: ", mse_poly(transposed_data[1], transposed_data[0], w2, 2))
+    print("k = 3: ", mse_poly(transposed_data[1], transposed_data[0], w3, 3))
+    print("k = 4: ", mse_poly(transposed_data[1], transposed_data[0], w4, 4))
 
 def draw_sin_with_noise(figure = None):
     """
@@ -380,11 +482,11 @@ def fitting_sin():
 
     x_plot = np.linspace(0,1,100)
 
-    w2 = knr_separate(x,y,2)
-    w5 = knr_separate(x,y,5)
-    w10 = knr_separate(x,y,10)
-    w14 = knr_separate(x,y,14)
-    w18 = knr_separate(x,y,18)
+    w2 = lrn_separate(x,y,2)
+    w5 = lrn_separate(x,y,5)
+    w10 = lrn_separate(x,y,10)
+    w14 = lrn_separate(x,y,14)
+    w18 = lrn_separate(x,y,18)
 
     y2 = calc_poly(x_plot,w2,2)
     y5 = calc_poly(x_plot,w5,5)
@@ -417,8 +519,8 @@ def sin_ln_mse():
     dim = np.arange(1,19)
     err = []
     for i in dim:
-        w = knr_separate(x,y,i)
-        err.append(np.log(mse(y,np.array(x),w,i)))
+        w = lrn_separate(x,y,i)
+        err.append(np.log(mse_poly(y,np.array(x),w,i)))
     
     plt.plot(dim, err, color ="red")
     plt.xlabel("dimension")
@@ -438,8 +540,8 @@ def thousand_points():
     dim = np.arange(1,19)
     err = []
     for i in dim:
-        w = knr_separate(x_train,y_train,i)
-        err.append(np.log(mse(y_test,np.array(x_test),w,i)))
+        w = lrn_separate(x_train,y_train,i)
+        err.append(np.log(mse_poly(y_test,np.array(x_test),w,i)))
     
     #plotting test error
     plt.plot(dim, err, color ="red")
@@ -465,9 +567,9 @@ def hundred_iter():
         test_err = []
         for i in dim:
             # calculating the train/test error for each dimension
-            w = knr_separate(x_train,y_train,i)
-            train_err.append(np.log(mse(y_train,np.array(x_train),w,i)))
-            test_err.append(np.log(mse(y_test,np.array(x_test),w,i)))
+            w = lrn_separate(x_train,y_train,i)
+            train_err.append(np.log(mse_poly(y_train,np.array(x_train),w,i)))
+            test_err.append(np.log(mse_poly(y_test,np.array(x_test),w,i)))
 
         # stacking the new row of errors on bottom
         if(iter == 0):
@@ -500,7 +602,7 @@ def sin_basis():
     dim = np.arange(1,19)
     err = []
     for i in dim:
-        w = knr_sin(x,y,i)
+        w = lrn_sin(x,y,i)
         err.append(np.log(mse_sin(y,np.array(x),w,i)))
     
     plt.plot(dim, err, color ="red")
@@ -516,7 +618,7 @@ def sin_basis():
     # clear err
     err = []
     for i in dim:
-        w = knr_sin(x_train,y_train,i)
+        w = lrn_sin(x_train,y_train,i)
         err.append(np.log(mse_sin(y_test,np.array(x_test),w,i)))
     
     #plotting test error
@@ -539,7 +641,7 @@ def sin_basis():
         test_err = []
         for i in dim:
             # calculating the train/test error for each dimension
-            w = knr_sin(x_train,y_train,i)
+            w = lrn_sin(x_train,y_train,i)
             train_err.append(np.log(mse_sin(y_train,np.array(x_train),w,i)))
             test_err.append(np.log(mse_sin(y_test,np.array(x_test),w,i)))
 
@@ -574,7 +676,7 @@ def naive_regression():
     total_testing_mse = 0
     for i in range(0,iteration):
         #prepare the data
-        train, test = train_test_split(data, 0.33)
+        train, test = train_test_split(data, 2/3)
         y_train = np.array(train.iloc[:, 12:13])
         y_test = np.array(test.iloc[:, 12:13])
 
@@ -583,10 +685,10 @@ def naive_regression():
         x_train = np.ones(train.iloc[:, 0:12].shape[0])
 
         #fitting
-        w = knr_separate(x_train, y_train, 1)
+        w = lrn_separate(x_train, y_train, 1)
         
-        training_mse = mse(y_train, x_train, w)
-        testing_mse = mse(y_test, x_test, w)
+        training_mse = mse_poly(y_train, x_train, w)
+        testing_mse = mse_poly(y_test, x_test, w)
 
         total_training_mse += training_mse
         total_testing_mse += testing_mse
@@ -613,7 +715,7 @@ def single_attribute():
     for attributes in range(0,12):
         # loop for 20 iterations
         for i in range(0,iteration):
-            train, test = train_test_split(data, 0.33)
+            train, test = train_test_split(data, 2/3)
             y_train = np.array(train.iloc[:, 12:13])
             y_test = np.array(test.iloc[:, 12:13])
 
@@ -622,10 +724,10 @@ def single_attribute():
             x_train = np.array(train.iloc[:, attributes:attributes + 1])
 
             # dim = 2 means using the ones and the actual value
-            w = knr_separate(x_train, y_train, 2)
+            w = lrn_separate(x_train, y_train, 2)
             
-            training_mse = mse(y_train, x_train, w)
-            testing_mse = mse(y_test, x_test, w)
+            training_mse = mse_poly(y_train, x_train, w)
+            testing_mse = mse_poly(y_test, x_test, w)
 
             total_training_mse += training_mse
             total_testing_mse += testing_mse
@@ -647,17 +749,17 @@ def all_attributes():
     total_testing_mse = 0
     for i in range(0,iteration):
         #prepare the data
-        train, test = train_test_split(data, 0.33)
+        train, test = train_test_split(data, 2/3)
         x_train = np.array(train.iloc[:, 0:12])
         y_train = np.array(train.iloc[:, 12:13])
         x_test = np.array(test.iloc[:, 0:12])
         y_test = np.array(test.iloc[:, 12:13])
         
         # dim = 2 means using the ones and the actual value
-        w = knr_separate(x_train, y_train, 2)
+        w = lrn_separate(x_train, y_train, 2)
         
-        training_mse = mse(y_train, x_train, w)
-        testing_mse = mse(y_test, x_test, w)
+        training_mse = mse_poly(y_train, x_train, w)
+        testing_mse = mse_poly(y_test, x_test, w)
 
         total_training_mse += training_mse
         total_testing_mse += testing_mse
@@ -671,3 +773,83 @@ def all_attributes():
 
 
 # Section 1.3
+def five_fold():
+    """
+    Q5, (a), (b)
+    """
+    print("Q5, (a)")
+    # load data
+    data = pd.read_csv('Boston-filtered.csv')
+    train, test = train_test_split(data, 2/3)
+    x_whole_train = np.array(train.iloc[:, 0:12])
+    y_whole_train = np.array(train.iloc[:, 12:13])
+    x_test = np.array(test.iloc[:, 0:12])
+    y_test = np.array(test.iloc[:, 12:13])
+    # cross validation
+    sets = n_fold(train, 5)
+
+    # initialize gamma and sigma
+    gamma = pow(2., np.arange(-40,-25,1))
+    sigma = pow(2., np.arange(7,13.5, 0.5))
+
+    best_loss = np.inf
+    best_g = gamma[0]
+    best_sig = sigma[0]
+
+    # create an array for all the mean loss to sit in
+    mean_loss_matrix = np.zeros((len(gamma), len(sigma)))
+
+    # for all combinations of gamma and sigma
+    i = 0
+    for g_value in gamma:
+        j = 0
+        for sig in sigma:
+            mean_loss = 0
+            for (training, validation) in sets:
+                x_train = np.array(training.iloc[:, 0:12])
+                y_train = np.array(training.iloc[:, 12:13])
+                x_validate = np.array(validation.iloc[:, 0:12])
+                y_validate = np.array(validation.iloc[:, 12:13])
+                # fit to kernel regressions
+                a = kernel_ridge(x_train, y_train, sig, g_value)
+
+                # compute y'
+                y_prime = calc_gaussian(x_train, x_validate, a, sig)
+                
+                mean_loss += mse(y_prime, y_validate)
+            mean_loss /= 5
+            print("gamma: ", g_value)
+            print("sigma: ", sig)
+            print("mean mse: ", mean_loss)
+            if mean_loss < best_loss:
+                best_loss = mean_loss
+                best_g = g_value
+                best_sig = sig
+            mean_loss_matrix[i,j] = mean_loss
+            j += 1
+        i += 1
+    print("the best set is: gamma: ", best_g, " sigma: ", best_sig, " loss: ", best_loss)
+
+    # Use the best parameter on the whole training set
+    # fit to kernel regressions
+    a = kernel_ridge(x_whole_train, y_whole_train, best_sig, best_g)
+
+    # compute y'
+    y_prime_train = calc_gaussian(x_whole_train, x_whole_train, a, best_sig)
+    y_prime_test = calc_gaussian(x_whole_train, x_test, a, best_sig)
+    
+    training_mse = mse(y_prime_train, y_whole_train)
+    testing_mse = mse(y_prime_test, y_test)
+
+    print("The loss with optimal gamma and sigma is: (train: ", training_mse, ") (test: ", testing_mse, ")")
+
+    # Q5, (b)
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    gamma, sigma = np.meshgrid(gamma, sigma)
+    # Plot the surface.
+    surf = ax.plot_surface(gamma, sigma, mean_loss_matrix.T, linewidth=0)
+    # Add a color bar which maps values to colors.
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    print("Q5, (b)")
+    plt.show()
+five_fold()
