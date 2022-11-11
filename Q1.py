@@ -1034,7 +1034,6 @@ def knn_general_err():
         losses = 0
         iteration_size = 100
         for iteration in range(0,iteration_size):
-            print("k = ", k, "iteration: ",  iteration)
             train_size = 4000
             test_size = 1000
 
@@ -1046,6 +1045,8 @@ def knn_general_err():
 
         losses /= iteration_size
         all_error.append(losses)
+        print("k = ", k)
+        print("loss = ", losses)
     print(all_error)
 
 knn_general_err()
