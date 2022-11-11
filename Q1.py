@@ -400,6 +400,35 @@ def kernel_ridge(x, y, sigma, gamma):
     a_star = np.dot(np.linalg.pinv(kernel + kernel.shape[0] * gamma * I),  y)
     return a_star
 
+def pH(n = 100):
+    """
+    prepares the hypothsis pH
+    """    
+    x = np.random.uniform(0, 1, (2, n))
+    y = np.random.randint(0, 2, (n, 1))
+    return x, y
+
+def ph(n):
+    """
+    samples h from pH and generate ph(x, y)
+    p(heads) = 0.8, p(tails) = 0.2 for each x
+    when head, y = h3(x,y)
+    when tail, y = random {0,1}
+    n: size
+    """
+    x, y = pH()
+
+    # randomly generate x of size n
+    x_samples = np.random.uniform(0, 1, (2, n)).T
+    y_samples = np.array([])
+    for xs in x_samples:
+        coin = np.random.choice(['head', 'tail'], p=[0.8, 0.2])
+        ys = knn(x.T, y, xs.reshape(1,2)) if coin == 'head' else np.random.randint(0,2)
+        y_samples = np.append(y_samples, ys)
+
+    return x_samples, y_samples
+
+
 def eucledian(p1,p2):
     """
     returns the eucledian distance between two points
@@ -419,10 +448,11 @@ def knn(xtrain, ytrain, xtest, k=3):
             xt31,xt32]
     """
     predict = np.array([])
+
     # Loop for each test data point
     for i in range(0,xtest.shape[0]):
-        if i % 1000 == 0:
-            print(i)
+        #if i % 1000 == 0:
+        #    print(i)
         # sorting a list wrt distance and get the first k elements
         dist_list = []
         for j in range(0, xtrain.shape[0]):
@@ -982,8 +1012,7 @@ def knn_visualize():
     Q6
     """
     # generating x and y randomly
-    x = np.random.uniform(0, 1, (2, 100))
-    y = np.random.randint(0, 2, (100, 1))
+    x, y = pH()
 
     # generate grid for all points
     precision = 100
@@ -1000,4 +1029,27 @@ def knn_visualize():
     print("Q6: ")
     plt.show()
 
+def knn_general_err():
+    """
+    Q7
+    """
+    all_error = []
+    for k in range(1,50):
+        losses = 0
+        iteration_size = 100
+        for iteration in range(0,iteration_size):
+            print("k = ", k, "iteration: ",  iteration)
+            train_size = 4000
+            test_size = 1000
 
+            x, y = ph(train_size)
+            x_test, y_test = ph(test_size)
+            y_prime = knn(x, y, x_test, k)
+            loss = np.linalg.norm(y_prime-y_test, 1)/test_size
+            losses += loss
+
+        losses /= iteration_size
+        all_error.append(losses)
+    print(all_error)
+
+knn_general_err()
