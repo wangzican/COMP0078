@@ -1,7 +1,10 @@
 from typing import List, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 import pandas as pd
+import os,sys
+import heapq
 
 
 training = np.array([[1,3],[2,2],[3,0],[4,5]])
@@ -397,6 +400,28 @@ def kernel_ridge(x, y, sigma, gamma):
     a_star = np.dot(np.linalg.pinv(kernel + kernel.shape[0] * gamma * I),  y)
     return a_star
 
+def eucledian(p1,p2):
+    """
+    returns the eucledian distance between two points
+    """
+    dist = np.linalg.norm(p1-p2, 2)
+    return dist
+
+def knn(xtrain, ytrain, test, k=3):
+    """
+    predict the given point
+    xtrain: [[x11,x12],
+             [x21,x22],
+             [x31,x32]]
+    """
+    dist_list = []
+    for i in range(0, xtrain.shape[0]):
+        dist = eucledian(xtrain[i], test)
+        dist_list.append((dist, i))
+    dist_list = sorted[dist_list][1:k+1]
+    
+    return
+
 # Section 1.1
 def plot_graph():
     """
@@ -666,14 +691,14 @@ def sin_basis():
     plt.show()
     
 # Section 1.2
-def naive_regression():
+def naive_regression(mute = False):
     """
     Q4, (a)
     """
     data = pd.read_csv('Boston-filtered.csv')
     iteration = 20
-    total_training_mse = 0
-    total_testing_mse = 0
+    total_training_mse = []
+    total_testing_mse = []
     for i in range(0,iteration):
         #prepare the data
         train, test = train_test_split(data, 2/3)
@@ -690,29 +715,37 @@ def naive_regression():
         training_mse = mse_poly(y_train, x_train, w)
         testing_mse = mse_poly(y_test, x_test, w)
 
-        total_training_mse += training_mse
-        total_testing_mse += testing_mse
+        total_training_mse.append(training_mse[0])
+        total_testing_mse.append(testing_mse[0])
 
-    mean_training_mse = total_training_mse/iteration
-    mean_testing_mse = total_testing_mse/iteration
+    mean_training_mse = np.mean(total_training_mse)
+    mean_testing_mse = np.mean(total_testing_mse)
     
-    print("Q4, (a): ")
-    print("training loss is: ", mean_training_mse)
-    print("testing loss is: ", mean_testing_mse)
-    print("Q4, (b): w is the mean of the training y values.")
+    # for question 5d, where this function will be called, but no print needed
+    if not mute:
+        print("Q4, (a): ")
+        print("training loss is: ", mean_training_mse)
+        print("testing loss is: ", mean_testing_mse)
+        print("Q4, (b): w is the mean of the training y values.")
+    return total_training_mse, total_testing_mse
 
-def single_attribute():
+def single_attribute(mute = False):
     """
     Q4, (c)
     """
     data = pd.read_csv('Boston-filtered.csv')
     iteration = 20
-    total_training_mse = 0
-    total_testing_mse = 0
+    total_training_mse = []
+    total_testing_mse = []
 
-    print("Q4, (c): ")
+    if not mute:
+        print("Q4, (c): ")
     # loop for each attribute
     for attributes in range(0,12):
+
+        single_attribute_training_mse = []
+        single_attribute_testing_mse = []
+
         # loop for 20 iterations
         for i in range(0,iteration):
             train, test = train_test_split(data, 2/3)
@@ -729,24 +762,28 @@ def single_attribute():
             training_mse = mse_poly(y_train, x_train, w)
             testing_mse = mse_poly(y_test, x_test, w)
 
-            total_training_mse += training_mse
-            total_testing_mse += testing_mse
+            single_attribute_training_mse.append(training_mse[0])
+            single_attribute_testing_mse.append(testing_mse[0])
 
-        mean_training_mse = total_training_mse/iteration
-        mean_testing_mse = total_testing_mse/iteration
+        mean_training_mse = np.mean(single_attribute_training_mse)
+        mean_testing_mse = np.mean(single_attribute_testing_mse)
 
-        print("for attribute ", train.columns[attributes])
-        print("training loss is: ", mean_training_mse)
-        print("testing loss is: ", mean_testing_mse)
+        total_training_mse.append(single_attribute_training_mse)
+        total_testing_mse.append(single_attribute_testing_mse)
+        if not mute:
+            print("for attribute ", train.columns[attributes])
+            print("training loss is: ", mean_training_mse)
+            print("testing loss is: ", mean_testing_mse)
+    return total_training_mse, total_testing_mse
         
-def all_attributes():
+def all_attributes(mute = False):
     """
     Q4, (d)
     """
     data = pd.read_csv('Boston-filtered.csv')
     iteration = 20
-    total_training_mse = 0
-    total_testing_mse = 0
+    total_training_mse = []
+    total_testing_mse = []
     for i in range(0,iteration):
         #prepare the data
         train, test = train_test_split(data, 2/3)
@@ -761,23 +798,25 @@ def all_attributes():
         training_mse = mse_poly(y_train, x_train, w)
         testing_mse = mse_poly(y_test, x_test, w)
 
-        total_training_mse += training_mse
-        total_testing_mse += testing_mse
+        total_training_mse.append(training_mse[0])
+        total_testing_mse.append(testing_mse[0])
 
-    mean_training_mse = total_training_mse/iteration
-    mean_testing_mse = total_testing_mse/iteration
+    mean_training_mse = np.mean(total_training_mse)
+    mean_testing_mse = np.mean(total_testing_mse)
     
-    print("Q4, (d): ")
-    print("training loss is: ", mean_training_mse)
-    print("testing loss is: ", mean_testing_mse)
-
+    if not mute:
+        print("Q4, (d): ")
+        print("training loss is: ", mean_training_mse)
+        print("testing loss is: ", mean_testing_mse)
+    return total_training_mse, total_testing_mse
 
 # Section 1.3
-def five_fold():
+def five_fold(mute = False):
     """
     Q5, (a), (b)
     """
-    print("Q5, (a)")
+    if not mute:
+        print("Q5, (a)")
     # load data
     data = pd.read_csv('Boston-filtered.csv')
     train, test = train_test_split(data, 2/3)
@@ -789,13 +828,14 @@ def five_fold():
     sets = n_fold(train, 5)
 
     # initialize gamma and sigma
-    gamma = pow(2., np.arange(-40,-25,1))
-    sigma = pow(2., np.arange(7,13.5, 0.5))
+    g_power = np.arange(-40,-25,1)
+    s_power = np.arange(7,13.5, 0.5)
+    gamma = pow(2., g_power)
+    sigma = pow(2., s_power)
 
     best_loss = np.inf
-    best_g = gamma[0]
-    best_sig = sigma[0]
-
+    best_g = 0
+    best_sig = 0
     # create an array for all the mean loss to sit in
     mean_loss_matrix = np.zeros((len(gamma), len(sigma)))
 
@@ -818,38 +858,112 @@ def five_fold():
                 
                 mean_loss += mse(y_prime, y_validate)
             mean_loss /= 5
-            print("gamma: ", g_value)
-            print("sigma: ", sig)
-            print("mean mse: ", mean_loss)
+            if not mute:
+                print("gamma: ", g_value)
+                print("sigma: ", sig)
+                print("mean mse: ", mean_loss)
             if mean_loss < best_loss:
                 best_loss = mean_loss
-                best_g = g_value
-                best_sig = sig
+                best_g = i
+                best_sig = j
             mean_loss_matrix[i,j] = mean_loss
             j += 1
         i += 1
-    print("the best set is: gamma: ", best_g, " sigma: ", best_sig, " loss: ", best_loss)
+    
+    # Q5, (a)
+    if not mute:
+        print("the best set is: gamma: 2^", g_power[best_g], 
+              " sigma: 2^", s_power[best_sig], 
+              " loss: ", best_loss)
+    
 
+    # Q5, (b)
+    if not mute: 
+        print("Q5, (b)")
+        matplotlib.rcParams.update({'font.size': 20})
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        fig.set_size_inches(30,30)
+
+        plot_gamma, plot_sigma = np.meshgrid(g_power, s_power)
+        # Plot the surface.
+        surf = ax.plot_surface(plot_gamma, plot_sigma, mean_loss_matrix.T, cmap=matplotlib.cm.coolwarm, antialiased = True)
+        # Add a color bar which maps values to colors.
+        fig.colorbar(surf, shrink=0.5, aspect=10)
+        # Labels and title
+        ax.set_xlabel("\nGamma",linespacing=4)
+        ax.set_ylabel("\nSigma",linespacing=4)
+        ax.set_zlabel("\nValidation loss",linespacing=4)
+        ax.set_title("Validation loss agains gamma and sigma")
+        ax.view_init(20, 20)
+        plt.show()
+    
+    # Q5, (c)
     # Use the best parameter on the whole training set
     # fit to kernel regressions
-    a = kernel_ridge(x_whole_train, y_whole_train, best_sig, best_g)
+    a = kernel_ridge(x_whole_train, y_whole_train, sigma[best_sig], gamma[best_g])
 
     # compute y'
-    y_prime_train = calc_gaussian(x_whole_train, x_whole_train, a, best_sig)
-    y_prime_test = calc_gaussian(x_whole_train, x_test, a, best_sig)
+    y_prime_train = calc_gaussian(x_whole_train, x_whole_train, a, sigma[best_sig])
+    y_prime_test = calc_gaussian(x_whole_train, x_test, a, sigma[best_sig])
     
     training_mse = mse(y_prime_train, y_whole_train)
     testing_mse = mse(y_prime_test, y_test)
 
-    print("The loss with optimal gamma and sigma is: (train: ", training_mse, ") (test: ", testing_mse, ")")
+    if not mute:
+        print("Q5, (c)")
+        print("The loss with optimal gamma and sigma is: (train: ", training_mse, ") (test: ", testing_mse, ")")
+    return training_mse, testing_mse
 
-    # Q5, (b)
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    gamma, sigma = np.meshgrid(gamma, sigma)
-    # Plot the surface.
-    surf = ax.plot_surface(gamma, sigma, mean_loss_matrix.T, linewidth=0)
-    # Add a color bar which maps values to colors.
-    fig.colorbar(surf, shrink=0.5, aspect=5)
-    print("Q5, (b)")
+def comparing_mse():
+    """
+    Q5, (d)
+    """
+    print("Q5, (d)")
+    # computer Q4, a,c,d
+    naive_train, naive_test = naive_regression(mute = True)
+    single_train, single_test = single_attribute(mute = True)
+    all_train, all_test = all_attributes(mute = True)
+
+    print("\nnaive regression:")
+    print("train: ", np.mean(naive_train), " +- ", np.std(naive_train))
+    print("test: ", np.mean(naive_test), " += ", np.std(naive_test))
+
+    # there are 12 single attribute loss arrays for both train and test
+    index = 1
+    for train, test in zip(single_train, single_test):
+        print("\nfor attribute ", index, ": ")
+        print("train: ", np.mean(train), " +- ", np.std(train))
+        print("test: ", np.mean(test), " += ", np.std(test))
+        index += 1
+
+    print("\nall attributes: ")
+    print("train: ", np.mean(all_train), " +- ", np.std(all_train))
+    print("test: ", np.mean(all_test), " +- ", np.std(all_test))
+
+    # Computer Q5, a,c
+    print("\ncalculating for kernel: ...")
+    kernel_train = []
+    kernel_test = []
+    iteration = 20
+    for i in range(0,iteration):
+        train, test = five_fold(mute = True)
+        kernel_train.append(train)
+        kernel_test.append(test)
+    print("\nkernel ridge:")
+    print("train: ", np.mean(kernel_train), " +- ", np.std(kernel_train))
+    print("test: ", np.mean(kernel_test), " +- ", np.std(kernel_test))
+
+# Section 2.1
+def knn_visualize():
+    """
+    Q6
+    """
+    # generating x and y randomly
+    x = np.random.uniform(0, 1, (2, 100))
+    y = np.random.randint(0, 2, (1, 100))
+
+    plt.scatter(x[0], x[1], c=y)
     plt.show()
-five_fold()
+
+#knn_visualize()
+eucledian(np.array([1,2,3,345,1]),np.array([2,253,7,2,3]))
