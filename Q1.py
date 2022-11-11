@@ -433,7 +433,7 @@ def eucledian(p1,p2):
     """
     returns the eucledian distance between two points
     """
-    dist = np.linalg.norm(p1-p2, 2)
+    dist = np.linalg.norm(p1-p2, 2, axis = 1)
     return dist
 
 def knn(xtrain, ytrain, xtest, k=3):
@@ -453,15 +453,11 @@ def knn(xtrain, ytrain, xtest, k=3):
     for i in range(0,xtest.shape[0]):
         #if i % 1000 == 0:
         #    print(i)
-        # sorting a list wrt distance and get the first k elements
-        dist_list = []
-        for j in range(0, xtrain.shape[0]):
-            dist = eucledian(xtrain[j], xtest[i])
-            dist_list.append([dist, j])
-        dist_list = sorted(dist_list, key = lambda x: x[0])[0:k]
 
-        # calculate the corresponding average y for the first k element
-        index = np.array(dist_list, dtype = int)[:,1]
+        # sorting a list wrt distance and get the first k elements
+        dist = eucledian(xtrain, xtest[i])
+        index = np.argsort(dist)[0:k]
+
         average = np.mean(ytrain[index])
 
         y_prime = 0
