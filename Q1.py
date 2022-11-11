@@ -407,20 +407,43 @@ def eucledian(p1,p2):
     dist = np.linalg.norm(p1-p2, 2)
     return dist
 
-def knn(xtrain, ytrain, test, k=3):
+def knn(xtrain, ytrain, xtest, k=3):
     """
     predict the given point
     xtrain: [[x11,x12],
              [x21,x22],
              [x31,x32]]
+    ytrain: [0,1,1]
+    xtest: [[xt11, xt12],
+            [xt21,xt22],
+            xt31,xt32]
     """
-    dist_list = []
-    for i in range(0, xtrain.shape[0]):
-        dist = eucledian(xtrain[i], test)
-        dist_list.append((dist, i))
-    dist_list = sorted[dist_list][1:k+1]
-    
-    return
+    predict = np.array([])
+    # Loop for each test data point
+    for i in range(0,xtest.shape[0]):
+        if i % 1000 == 0:
+            print(i)
+        # sorting a list wrt distance and get the first k elements
+        dist_list = []
+        for j in range(0, xtrain.shape[0]):
+            dist = eucledian(xtrain[j], xtest[i])
+            dist_list.append([dist, j])
+        dist_list = sorted(dist_list, key = lambda x: x[0])[0:k]
+
+        # calculate the corresponding average y for the first k element
+        index = np.array(dist_list, dtype = int)[:,1]
+        average = np.mean(ytrain[index])
+
+        y_prime = 0
+        if average > 0.5:
+            y_prime = 1
+        elif average < 0.5:
+            y_prime = 0
+        else: 
+            y_prime = np.random.randint(0,2)
+
+        predict = np.append(predict, y_prime)
+    return predict
 
 # Section 1.1
 def plot_graph():
@@ -960,10 +983,21 @@ def knn_visualize():
     """
     # generating x and y randomly
     x = np.random.uniform(0, 1, (2, 100))
-    y = np.random.randint(0, 2, (1, 100))
+    y = np.random.randint(0, 2, (100, 1))
 
-    plt.scatter(x[0], x[1], c=y)
+    # generate grid for all points
+    precision = 100
+    x_region = np.linspace(0,1, precision)
+    x1, x2 = np.meshgrid(x_region, x_region)
+    all_points = np.array([x1.ravel(), x2.ravel()]).T
+
+    # transpose x to get x1, x2 pairs
+    y_prime = knn(x.T, y, all_points)
+    y_prime = y_prime.reshape(x1.shape)
+
+    plt.contourf(x1, x2, y_prime, cmap = 'Blues_r')
+    plt.scatter(x[0], x[1], c=y, cmap = 'binary')
+    print("Q6: ")
     plt.show()
 
-#knn_visualize()
-eucledian(np.array([1,2,3,345,1]),np.array([2,253,7,2,3]))
+
