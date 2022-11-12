@@ -1,3 +1,4 @@
+from cProfile import label
 from typing import List, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
@@ -1029,24 +1030,88 @@ def knn_general_err():
     """
     Q7
     """
+    print("Q7 (a): ")
     all_error = []
+    # for each k
     for k in range(1,50):
+        print("k = ", k)
         losses = 0
         iteration_size = 100
+        # for each iteration
         for iteration in range(0,iteration_size):
             train_size = 4000
             test_size = 1000
 
+            # get the train and test set from distribution ph
             x, y = ph(train_size)
             x_test, y_test = ph(test_size)
+
+            # get the y' and calculate missclassification
             y_prime = knn(x, y, x_test, k)
             loss = np.linalg.norm(y_prime-y_test, 1)/test_size
             losses += loss
 
+        # get mean loss
         losses /= iteration_size
         all_error.append(losses)
-        print("k = ", k)
         print("loss = ", losses)
     print(all_error)
+    
+    plt.plot(np.arange(1,50), all_error)
+    plt.xlabel("loss")
+    plt.ylabel("k")
+    plt.title("k against loss")
+    plt.show()
 
-knn_general_err()
+def knn_optimal_k():
+    """
+    Q8
+    """
+    print("Q8 (a): ")
+    best_ks = []
+    # generate m
+    m = np.arange(0,41,5)
+    m[0] = 1
+    m = 100*m
+
+    for ms in m:
+        print("m: ", ms)
+        best_k_all = 0
+        iteration_size = 100
+        # for each iteration
+        for iteration in range(0,iteration_size):
+            # for each k
+            best_loss = np.inf
+            best_k = 0
+            for k in range(1,50):
+                train_size = ms
+                test_size = 1000
+
+                # get the train and test set from distribution ph
+                x, y = ph(train_size)
+                x_test, y_test = ph(test_size)
+
+                # get the y' and calculate missclassification
+                y_prime = knn(x, y, x_test, k)
+                loss = np.linalg.norm(y_prime-y_test, 1)/test_size
+
+                # update best loss
+                if loss < best_loss:
+                    best_loss = loss
+                    best_k = k
+
+            best_k_all += best_k
+        # average the total loss from each iteration
+        best_k_all /= iteration
+        print("best k: ", best_k_all)
+        best_ks.append(best_k_all)
+
+    
+    plt.plot(m, best_ks)
+    plt.xlabel("k")
+    plt.ylabel("m")
+    plt.title("m against k")
+    plt.show()
+
+
+knn_optimal_k()
