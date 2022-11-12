@@ -409,26 +409,27 @@ def pH(n = 100):
     y = np.random.randint(0, 2, (n, 1))
     return x, y
 
-def ph(n):
+def ph(x, y, n):
     """
-    samples h from pH and generate ph(x, y)
+    given h from pH and generate ph(x, y)
     p(heads) = 0.8, p(tails) = 0.2 for each x
     when head, y = h3(x,y)
     when tail, y = random {0,1}
     n: size
     """
-    x, y = pH()
-
+    # x, y = pH()
+    # x = x.T
     # randomly generate x of size n
-    x_samples = np.random.uniform(0, 1, (2, n)).T
-    y_samples = np.array([])
+    x_samples = np.random.uniform(0, 1, (n, 2))
+    y_samples = np.zeros(n)
+    index = 0
     for xs in x_samples:
         coin = np.random.choice(['head', 'tail'], p=[0.8, 0.2])
-        ys = knn(x.T, y, xs.reshape(1,2)) if coin == 'head' else np.random.randint(0,2)
-        y_samples = np.append(y_samples, ys)
+        ys = knn(x, y, xs.reshape(1,2)).item() if coin == 'head' else np.random.randint(0,2)
+        y_samples[index] = ys
+        index += 1
 
     return x_samples, y_samples
-
 
 def eucledian(p1,p2):
     """
@@ -470,7 +471,9 @@ def knn(xtrain, ytrain, xtest, k=3):
             y_prime = np.random.randint(0,2)
 
         predict = np.append(predict, y_prime)
+        
     return predict
+
 
 # Section 1.1
 def plot_graph():
@@ -1033,7 +1036,8 @@ def knn_general_err():
     print("Q7 (a): ")
     all_error = []
     # for each k
-    for k in range(1,50):
+    kmax = 20
+    for k in range(1,kmax):
         print("k = ", k)
         losses = 0
         iteration_size = 100
@@ -1043,11 +1047,14 @@ def knn_general_err():
             test_size = 1000
 
             # get the train and test set from distribution ph
-            x, y = ph(train_size)
-            x_test, y_test = ph(test_size)
+            a, b = pH()
+            a = a.T
+            x, y = ph(a, b, train_size)
+            x_test, y_test = ph(a, b, test_size)
 
             # get the y' and calculate missclassification
             y_prime = knn(x, y, x_test, k)
+            
             loss = np.linalg.norm(y_prime-y_test, 1)/test_size
             losses += loss
 
@@ -1057,7 +1064,7 @@ def knn_general_err():
         print("loss = ", losses)
     print(all_error)
     
-    plt.plot(np.arange(1,50), all_error)
+    plt.plot(np.arange(1,kmax), all_error)
     plt.xlabel("loss")
     plt.ylabel("k")
     plt.title("k against loss")
@@ -1113,5 +1120,4 @@ def knn_optimal_k():
     plt.title("m against k")
     plt.show()
 
-
-knn_optimal_k()
+knn_general_err()
