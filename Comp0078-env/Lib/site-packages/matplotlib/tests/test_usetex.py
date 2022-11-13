@@ -1,14 +1,17 @@
+from tempfile import TemporaryFile
+
 import numpy as np
 import pytest
 
 import matplotlib as mpl
+from matplotlib import dviread
 from matplotlib.testing import _has_tex_package
 from matplotlib.testing.decorators import check_figures_equal, image_comparison
+from matplotlib.testing._markers import needs_usetex
 import matplotlib.pyplot as plt
 
 
-if not mpl.checkdep_usetex(True):
-    pytestmark = pytest.mark.skip('Missing TeX of Ghostscript or dvipng')
+pytestmark = needs_usetex
 
 
 @image_comparison(
@@ -59,6 +62,21 @@ def test_mathdefault():
     # problems when later switching usetex on.
     mpl.rcParams['text.usetex'] = True
     fig.canvas.draw()
+
+
+@image_comparison(['eqnarray.png'])
+def test_multiline_eqnarray():
+    text = (
+        r'\begin{eqnarray*}'
+        r'foo\\'
+        r'bar\\'
+        r'baz\\'
+        r'\end{eqnarray*}'
+    )
+
+    fig = plt.figure(figsize=(1, 1))
+    fig.text(0.5, 0.5, text, usetex=True,
+             horizontalalignment='center', verticalalignment='center')
 
 
 @pytest.mark.parametrize("fontsize", [8, 10, 12])
@@ -119,3 +137,19 @@ def test_usetex_with_underscore():
     ax.legend()
     ax.text(0, 0, "foo_bar", usetex=True)
     plt.draw()
+
+
+@pytest.mark.flaky(reruns=3)  # Tends to hit a TeX cache lock on AppVeyor.
+@pytest.mark.parametrize("fmt", ["pdf", "svg"])
+def test_missing_psfont(fmt, monkeypatch):
+    """An error is raised if a TeX font lacks a Type-1 equivalent"""
+    monkeypatch.setattr(
+        dviread.PsfontsMap, '__getitem__',
+        lambda self, k: dviread.PsFont(
+            texname=b'texfont', psname=b'Some Font',
+            effects=None, encoding=None, filename=None))
+    mpl.rcParams['text.usetex'] = True
+    fig, ax = plt.subplots()
+    ax.text(0.5, 0.5, 'hello')
+    with TemporaryFile() as tmpfile, pytest.raises(ValueError):
+        fig.savefig(tmpfile, format=fmt)
