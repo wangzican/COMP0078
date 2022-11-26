@@ -1,11 +1,8 @@
 from cProfile import label
-from typing import List, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import pandas as pd
-import os,sys
-import heapq
 
 
 training = np.array([[1,3],[2,2],[3,0],[4,5]])
@@ -532,7 +529,8 @@ def draw_sin_with_noise(figure = None):
         figure = plt.figure()
 
     # ploting the points with noise
-    x, y = initialize_data(30, 0.07)
+    noise = np.sqrt(0.07)
+    x, y = initialize_data(30, noise)
     plt.plot(x, y, 'ro', figure = figure, label = 'samples')
 
     # plotting the sin graph
@@ -555,7 +553,8 @@ def fitting_sin():
     Q2, (a), ii
     """
     # generate points
-    x, y = initialize_data(30, 0.07)
+    noise = np.sqrt(0.07)
+    x, y = initialize_data(30, noise)
     plt.plot(x, y, 'ro')
 
     x_plot = np.linspace(0,1,100)
@@ -591,7 +590,8 @@ def sin_ln_mse():
         Q2, (b)
     """
     # generate points
-    x, y = initialize_data(30, 0.07)
+    noise = np.sqrt(0.07)
+    x, y = initialize_data(30, noise)
 
     # computing the mse in a loop
     dim = np.arange(1,19)
@@ -612,8 +612,9 @@ def thousand_points():
     Q2, (c)
     """
     # generate the test and training data
-    x_train, y_train = initialize_data(30, 0.07)
-    x_test, y_test = initialize_data(1000, 0.07)
+    noise = np.sqrt(0.07)
+    x_train, y_train = initialize_data(30, noise)
+    x_test, y_test = initialize_data(1000, noise)
 
     dim = np.arange(1,19)
     err = []
@@ -638,8 +639,9 @@ def hundred_iter():
     all_test_err = []
     for iter in range(0,100):
         #print("Iteration ", iter)
-        x_train, y_train = initialize_data(30, 0.07)
-        x_test, y_test = initialize_data(1000, 0.07)
+        noise = np.sqrt(0.07)
+        x_train, y_train = initialize_data(30, noise)
+        x_test, y_test = initialize_data(1000, noise)
         dim = np.arange(1,19)
         train_err = []
         test_err = []
@@ -674,7 +676,8 @@ def sin_basis():
     Q3
     """
     # generate points
-    x, y = initialize_data(30, 0.07)
+    noise = np.sqrt(0.07)
+    x, y = initialize_data(30, noise)
 
     # computing the mse in a loop
     dim = np.arange(1,19)
@@ -691,8 +694,8 @@ def sin_basis():
     plt.show()
 
     # generate the test and training data
-    x_train, y_train = initialize_data(30, 0.07)
-    x_test, y_test = initialize_data(1000, 0.07)
+    x_train, y_train = initialize_data(30, noise)
+    x_test, y_test = initialize_data(1000, noise)
     # clear err
     err = []
     for i in dim:
@@ -712,8 +715,8 @@ def sin_basis():
     all_test_err = []
     for iter in range(0,100):
         #print("Iteration ", iter)
-        x_train, y_train = initialize_data(30, 0.07)
-        x_test, y_test = initialize_data(1000, 0.07)
+        x_train, y_train = initialize_data(30, noise)
+        x_test, y_test = initialize_data(1000, noise)
         dim = np.arange(1,19)
         train_err = []
         test_err = []
@@ -1036,7 +1039,7 @@ def knn_general_err():
     print("Q7 (a): ")
     all_error = []
     # for each k
-    kmax = 20
+    kmax = 50
     for k in range(1,kmax):
         print("k = ", k)
         losses = 0
@@ -1065,8 +1068,8 @@ def knn_general_err():
     print(all_error)
     
     plt.plot(np.arange(1,kmax), all_error)
-    plt.xlabel("loss")
-    plt.ylabel("k")
+    plt.xlabel("k")
+    plt.ylabel("loss")
     plt.title("k against loss")
     plt.show()
 
@@ -1095,8 +1098,10 @@ def knn_optimal_k():
                 test_size = 1000
 
                 # get the train and test set from distribution ph
-                x, y = ph(train_size)
-                x_test, y_test = ph(test_size)
+                a, b = pH()
+                a = a.T
+                x, y = ph(a, b, train_size)
+                x_test, y_test = ph(a, b, test_size)
 
                 # get the y' and calculate missclassification
                 y_prime = knn(x, y, x_test, k)
@@ -1115,9 +1120,7 @@ def knn_optimal_k():
 
     
     plt.plot(m, best_ks)
-    plt.xlabel("k")
-    plt.ylabel("m")
+    plt.xlabel("m")
+    plt.ylabel("optimal k")
     plt.title("m against k")
     plt.show()
-
-knn_general_err()
