@@ -24,7 +24,7 @@ def train_test_split(dataset, ratio):
     
     train = np.array(train)
     test = np.array(test)
-    print(train.shape, test.shape)
+
     x_train = np.array(train[:,1:])
     y_train = np.array(train[:,0])
     x_test = np.array(test[:,1:])
@@ -49,7 +49,6 @@ def visualize(digits):
         plt.title(digit[0])
     plt.subplots_adjust(wspace=0.4, hspace=0.4)
     plt.show()
-
 
 def poly_kernel(xi, xj, degree):
     return xi.dot(xj.T) ** degree
@@ -212,6 +211,7 @@ class onevone():
         """
         get the mean error for the whole test set
         """
+        # run prediction for all the tests and get the wrong ones
         error = 0
         number_of_tests = x_test.shape[0]
         for i in range(number_of_tests):
@@ -227,15 +227,39 @@ class onevone():
 data = np.loadtxt('Data\zipcombo.dat')
 
 def question_one():
+    """
+    Part 1
+    """
+    all_train_loss = []
+    all_test_loss = []
     runs = 20
+    # iterate through the degrees
     for d in range(0,7):
         degree = d+1
+        train_list = []
+        test_list = []
+        # for each degree, iterate
         for run in range(runs):
+            # split the data randomly into train and test portions
             x_train, y_train, x_test, y_test = train_test_split(data, 0.8)
+            # define the multiclass classifier
             model = onevrest(x_train, y_train, degree=degree)
+            # fitting, also gets the train loss
             weights, loss = model.fit()
-            print("degree: ", degree, " iter: ", run, " train loss: ", loss)
+            # getting the test loss
             test_loss = model.test(x_test, y_test)
+
+            print("degree: ", degree, " iter: ", run, " train loss: ", loss)
             print("test loss: ", test_loss)
-    
-question_one()
+            train_list.append(loss)
+            test_list.append(test_loss)
+        # calculate the mean and standard deviation of train and test errors
+        train_mean, train_std = np.mean(train_list), np.std(train_list)
+        test_mean, test_std = np.mean(test_list), np.std(test_list)
+        all_train_loss.append((train_mean, train_std))
+        all_test_loss.append((test_mean, test_std))
+
+    print(all_train_loss, all_test_loss)
+
+if __name__ == "__main__":
+    question_one()
