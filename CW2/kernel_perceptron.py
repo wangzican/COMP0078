@@ -380,6 +380,7 @@ def P1Q2(digit_data):
     print("test: ", test_mean, " +- ", test_std)
     print("d: ", d_mean, " +- ", d_std)
     print(overall_confusion_mtr)
+    return np.mean(total_confusion, axis=0), np.std(total_confusion, axis=0)
 
 
 
