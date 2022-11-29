@@ -95,6 +95,7 @@ class onevrest():
         self.X = X
         self.Y = Y
         self.degree = degree
+        self.number_of_class = number_of_class
         # weights for each 1vrest classifier, initialize to zeros
         self.weights = np.zeros((number_of_class, self.number_of_data))
 
@@ -145,19 +146,32 @@ class onevrest():
         y_hat = np.argmax(self.weights.dot(kernel))
         return y_hat
 
-    def test(self, x_test, y_test):
+    def test(self, x_test, y_test, detail=False):
         """
         get the mean error for the whole test set
         """
+        # placeholders
+        confusion_mtr = np.zeros((self.number_of_class, self.number_of_class))
+        number_of_sample_for_each_class = np.zeros(self.number_of_class)
+
         error = 0
         number_of_tests = x_test.shape[0]
         for i in range(number_of_tests):
             kernel = poly_kernel(self.X, x_test[i], self.degree)
             y_hat = np.argmax(self.weights.dot(kernel))
+            # counting the number of samples of each class
+            number_of_sample_for_each_class[int(y_test[i])] += 1
             if y_hat != y_test[i]:
                 error += 1
-        mean_error = error/number_of_tests
+                # counting for the confusion matrix
+                confusion_mtr[int(y_test[i]), y_hat] += 1
 
+        mean_error = error/number_of_tests
+        # normalize the mistakes in confusion matrix
+        for i in range(self.number_of_class):
+            confusion_mtr[i] = confusion_mtr[i]/number_of_sample_for_each_class[i]
+        if detail:
+            return mean_error, confusion_mtr
         return mean_error
 
 class onevone():
@@ -300,15 +314,16 @@ def P1Q2(digit_data):
     Question 2
     """
     train, test = train_test_split(digit_data, 0.8, split_label=False)
-    sets = n_fold(train, 5)
+    sets = n_fold(train, 2)
 
     # initialize list of d and test errors
     optimal_ds = []
     test_errors = []
-    runs = 20
-    max_degree = 7
+    runs = 2
+    max_degree = 2
     # iterate 20 times
     for run in range(runs):
+        total_confusion = []
         # iterate through the degrees
         mean_validation_loss = np.zeros(max_degree)
         for d in range(max_degree):
@@ -343,16 +358,29 @@ def P1Q2(digit_data):
         # fitting
         _, _ = model.fit()
         # getting the test loss
-        test_loss = model.test(x_test, y_test)
+        test_loss, confusion_mtr = model.test(x_test, y_test, detail=True)
         test_errors.append(test_loss)
+        # getting the list of confusion matrix 
+        total_confusion.append(confusion_mtr)
     
     # calculate mean d and test error
     test_mean = np.mean(test_errors)
     test_std = np.std(test_errors)
     d_mean = np.mean(optimal_ds)
     d_std = np.std(optimal_ds)
+
+    # calculate the mean and std of confusion matrix elements
+    print(np.mean(total_confusion, axis=0), np.std(total_confusion, axis=0))
+    confusion_mean = np.mean(total_confusion, axis=0).tolist()
+    confusion_std = np.std(total_confusion, axis=0).tolist()
+    overall_confusion_mtr = np.zeros((10,10)).tolist()
+    for i in range(10):
+        for j in range(10):
+            overall_confusion_mtr[i][j] = (confusion_mean[i][j], confusion_std[i][j])
     print("test: ", test_mean, " +- ", test_std)
     print("d: ", d_mean, " +- ", d_std)
+    print(overall_confusion_mtr)
+
 
 
 
