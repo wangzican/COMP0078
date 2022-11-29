@@ -371,15 +371,15 @@ def P1Q2(digit_data):
 
     # calculate the mean and std of confusion matrix elements
     print(np.mean(total_confusion, axis=0), np.std(total_confusion, axis=0))
-    confusion_mean = np.mean(total_confusion, axis=0).tolist()
-    confusion_std = np.std(total_confusion, axis=0).tolist()
-    overall_confusion_mtr = np.zeros((10,10)).tolist()
-    for i in range(10):
-        for j in range(10):
-            overall_confusion_mtr[i][j] = (confusion_mean[i][j], confusion_std[i][j])
+    # confusion_mean = np.mean(total_confusion, axis=0).tolist()
+    # confusion_std = np.std(total_confusion, axis=0).tolist()
+    # overall_confusion_mtr = np.zeros((10,10)).tolist()
+    # for i in range(10):
+    #     for j in range(10):
+    #         overall_confusion_mtr[i][j] = (confusion_mean[i][j], confusion_std[i][j])
+    # print(overall_confusion_mtr)
     print("test: ", test_mean, " +- ", test_std)
     print("d: ", d_mean, " +- ", d_std)
-    print(overall_confusion_mtr)
     return np.mean(total_confusion, axis=0), np.std(total_confusion, axis=0)
 
 
