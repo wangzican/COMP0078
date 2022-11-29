@@ -4,7 +4,7 @@ import itertools
 import pandas as pd
 from matplotlib import pyplot as plt
 
-def train_test_split(dataset, ratio):
+def train_test_split(dataset, ratio, split_label = True):
     """
     Split the data randomly to two sets with a given ratio
 
@@ -25,6 +25,10 @@ def train_test_split(dataset, ratio):
     train = np.array(train)
     test = np.array(test)
 
+    # sometimes dont want to split the data and label
+    if not split_label:
+        return train, test
+
     x_train = np.array(train[:,1:])
     y_train = np.array(train[:,0])
     x_test = np.array(test[:,1:])
@@ -32,6 +36,37 @@ def train_test_split(dataset, ratio):
 
 
     return x_train, y_train, x_test, y_test
+
+def n_fold(dataset, n):
+    """
+    Returns n sets randomly poped from a dataframe that are equally sized,
+    for cross-validation
+
+    returns:
+    sets: [[training, validation],
+           [training, validation],
+           [training, validation]]
+    """
+    sets = []
+    validations = []
+    
+    rest = dataset
+    # get the validation set
+    for i in range(0,n-1):
+        validation, rest = train_test_split(rest, 1/(n-i), split_label=False)
+        validation = np.array(validation)
+        validations.append(validation)
+    validations.append(np.array(rest))
+
+    # get the corresponding training set
+    for index in range(0, len(validations)):
+        validation = validations[index]
+        whole = validations.copy()
+        whole.pop(index)
+        training = np.vstack(whole)
+        sets.append([training, validation])
+
+    return sets
 
 def visualize(digits):
     """
@@ -186,7 +221,7 @@ class onevone():
                     # if the negative class is classified as positive
                     if self.Y[i] == classes[0] and confidence[index] > 0:
                         self.weights[index, i] -= learning_rate
-                    if self.Y[i ]== classes[1] and confidence[index] <= 0:
+                    if self.Y[i] == classes[1] and confidence[index] <= 0:
                         self.weights[index, i] += learning_rate
                     
 
@@ -224,9 +259,8 @@ class onevone():
 
         return mean_error
 
-data = np.loadtxt('Data\zipcombo.dat')
 
-def question_one():
+def P1Q1(digit_data):
     """
     Part 1
     """
@@ -241,7 +275,7 @@ def question_one():
         # for each degree, iterate
         for run in range(runs):
             # split the data randomly into train and test portions
-            x_train, y_train, x_test, y_test = train_test_split(data, 0.8)
+            x_train, y_train, x_test, y_test = train_test_split(digit_data, 0.8)
             # define the multiclass classifier
             model = onevrest(x_train, y_train, degree=degree)
             # fitting, also gets the train loss
@@ -261,5 +295,67 @@ def question_one():
 
     print(all_train_loss, all_test_loss)
 
+def P1Q2(digit_data):
+    """
+    Question 2
+    """
+    train, test = train_test_split(digit_data, 0.8, split_label=False)
+    sets = n_fold(train, 5)
+
+    # initialize list of d and test errors
+    optimal_ds = []
+    test_errors = []
+    runs = 20
+    max_degree = 7
+    # iterate 20 times
+    for run in range(runs):
+        # iterate through the degrees
+        mean_validation_loss = np.zeros(max_degree)
+        for d in range(max_degree):
+            print("run ", run, "degree ", d+1)
+            degree = d+1
+            validation_error = 0
+            for (training, validation) in sets:
+                # split the data into features and labeels 
+                x_train = np.array(training)[:,1:]
+                y_train = np.array(training)[:,0]
+                x_validate = np.array(validation)[:,1:]
+                y_validate = np.array(validation)[:,0]
+                # define the multiclass classifier
+                model = onevrest(x_train, y_train, degree=degree)
+                # fitting
+                _, _ = model.fit()
+                # getting the test loss
+                validation_loss = model.test(x_validate, y_validate)
+                validation_error += validation_loss
+
+            mean_validation_loss[d] = validation_error
+        # add the optimal d value to the list
+        optimal_d = np.argmin(mean_validation_loss) + 1
+        optimal_ds.append(optimal_d)
+
+        # training using the optimal d
+        x_full_train = np.array(train)[:,1:]
+        y_full_train = np.array(train)[:,0]
+        x_test = np.array(test)[:,1:]
+        y_test = np.array(test)[:,0]
+        model = onevrest(x_full_train, y_full_train, degree=optimal_d)
+        # fitting
+        _, _ = model.fit()
+        # getting the test loss
+        test_loss = model.test(x_test, y_test)
+        test_errors.append(test_loss)
+    
+    # calculate mean d and test error
+    test_mean = np.mean(test_errors)
+    test_std = np.std(test_errors)
+    d_mean = np.mean(optimal_ds)
+    d_std = np.std(optimal_ds)
+    print("test: ", test_mean, " +- ", test_std)
+    print("d: ", d_mean, " +- ", d_std)
+
+
+
 if __name__ == "__main__":
-    question_one()
+    data = np.loadtxt('Data\zipcombo.dat')
+    P1Q2(data)
