@@ -329,7 +329,13 @@ def P1Q1(digit_data):
         all_test_loss.append((test_mean, test_std))
 
     print("Q1: train and test error rate for each degree")
-    print(all_train_loss, all_test_loss)
+    for i in range(0,7):
+        degree = i+1
+        print("degree: ", degree)
+        print("train: ", all_train_loss[i][0], " +- ",  all_train_loss[i][1])
+        print("test: ", all_test_loss[i][0], " +- ",  all_test_loss[i][1])
+    print(pd.DataFrame(all_train_loss))
+    print(pd.DataFrame(all_test_loss))
 
 def P1Q2(digit_data):
     """
@@ -395,7 +401,8 @@ def P1Q2(digit_data):
 
     # calculate the mean and std of confusion matrix elements
     print("Q2: test errors and optimal ds for each run: ")
-    print(test_errors, optimal_ds)
+    print(test_errors)
+    print(optimal_ds)
     print("test: ", test_mean, " +- ", test_std)
     print("d: ", d_mean, " +- ", d_std)
     return np.mean(total_confusion, axis=0), np.std(total_confusion, axis=0)
@@ -474,7 +481,15 @@ def P1Q51(digit_data):
         all_train_loss.append((train_mean, train_std))
         all_test_loss.append((test_mean, test_std))
 
-    print(all_train_loss, all_test_loss)
+    
+    print("Q6-1: train and test error rate for each c value in gaussian kernel")
+    for i in range(0,7):
+        degree = float(2)**(-c[d])
+        print("c: ", degree)
+        print("train: ", all_train_loss[i][0], " +- ",  all_train_loss[i][1])
+        print("test: ", all_test_loss[i][0], " +- ",  all_test_loss[i][1])
+    print(pd.DataFrame(all_train_loss))
+    print(pd.DataFrame(all_test_loss))
 
 def P1Q52(digit_data):
     """
@@ -536,9 +551,9 @@ def P1Q52(digit_data):
     d_mean = np.mean(optimal_ds)
     d_std = np.std(optimal_ds)
 
-    # calculate the mean and std of confusion matrix elements
-    print("Q5-2: test errors and optimal ds for each run: ")
-    print(test_errors, optimal_ds)
+    print("Q5-2: test errors and optimal ds for each run, with gaussian kernel: ")
+    print(test_errors)
+    print(optimal_ds)
     print("test: ", test_mean, " +- ", test_std)
     print("d: ", d_mean, " +- ", d_std)
 
@@ -577,7 +592,13 @@ def P1Q61(digit_data):
         all_test_loss.append((test_mean, test_std))
 
     print("Q6-1: train and test error rate for each degree, with one vs one multiclass classifier")
-    print(all_train_loss, all_test_loss)
+    for i in range(0,7):
+        degree = i+1
+        print("degree: ", degree)
+        print("train: ", all_train_loss[i][0], " +- ",  all_train_loss[i][1])
+        print("test: ", all_test_loss[i][0], " +- ",  all_test_loss[i][1])
+    print(pd.DataFrame(all_train_loss))
+    print(pd.DataFrame(all_test_loss))
 
 def P1Q62(digit_data):
     """
@@ -640,10 +661,11 @@ def P1Q62(digit_data):
 
     # calculate the mean and std of confusion matrix elements
     print("Q6-2: test errors and optimal ds for each run, with one vs one classifier: ")
-    print(test_errors, optimal_ds)
+    print(test_errors)
+    print(optimal_ds)
     print("test: ", test_mean, " +- ", test_std)
     print("d: ", d_mean, " +- ", d_std)
 
 if __name__ == "__main__":
     data = np.loadtxt('Data\zipcombo.dat')
-    P1Q51(data)
+    P1Q52(data)
