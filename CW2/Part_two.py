@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def sample_wo_replacement(data, classes, size, return_index=True):
     # prevent repeated labels
     classes = set(classes)
@@ -24,10 +23,11 @@ def sample_wo_replacement(data, classes, size, return_index=True):
         else:
             all_sampled_data = np.vstack((all_sampled_data, sampled_data))
             all_index = np.hstack((all_index, selected_index))
-        data = np.delete(data, selected_index, axis=0)
 
     if return_index:
         return all_index
+        
+    data = np.delete(data, all_index, axis=0)
 
     rest_data = data
     return all_sampled_data, rest_data
@@ -59,6 +59,50 @@ def knn(graph, k=3):
         weight_matrix[i,index] += 1
 
     return weight_matrix
+
+def Laplacian_matrix(graph, k=3):
+    """
+    Return the Laplacian matrix
+    """
+    weight = knn(graph, k)
+    diagonal = np.diag(np.sum(weight, axis=1))
+    Laplacian = diagonal - weight
+    return Laplacian
+
+def Laplacian_kernel1(L, labeled_index):
+    """
+    Retrun the kernel for Laplacian interpolation +0
+    """
+    inverse = np.linalg.pinv(L)
+    # print(np.meshgrid(labeled_index, labeled_index))
+    kernel_matrix = np.zeros((inverse.shape[0], inverse.shape[0]))
+
+    for i in range(labeled_index.shape[0]):
+        for j in range(labeled_index.shape[0]):
+            kernel_matrix[labeled_index[i], labeled_index[j]] = inverse[labeled_index[i], labeled_index[j]]
+
+    return kernel_matrix
+
+def Laplacian_kernel(L, labeled_index):
+    """
+    Retrun the kernel for Laplacian interpolation
+    """
+    inverse = np.linalg.pinv(L)
+    # print(np.meshgrid(labeled_index, labeled_index))
+    kernel_matrix = np.zeros((labeled_index.shape[0], labeled_index.shape[0]))
+
+    for i in range(labeled_index.shape[0]):
+        kernel_matrix[i] = inverse[labeled_index[i], labeled_index]
+
+    return kernel_matrix
+
+def e(index, length):
+    """
+    Return one hot vector representation
+    """
+    e = np.zeros(length)
+    e[index] = 1
+    return e
 
 def LaplacianInterpolation(data, labeled_index):
     """
@@ -93,8 +137,72 @@ def LaplacianInterpolation(data, labeled_index):
     errors = np.sum(wrong_prediction)
     return errors
 
+def LaplacianKernelInterpolation(data, labeled_index):
+    """
+    For two classes 1, 3
+    """
+    # splitting the data
+    x_data = data[:, 1:]
+    y_true_label = data[:, 0]
+    # getting the labeled y
+    y_labeled = y_true_label[labeled_index]
+    y_labeled[y_labeled == 1] = -1
+    y_labeled[y_labeled == 3] = 1
+    print(y_labeled)
 
-def LaplacianKernelInterpolation(dataset, L):
+    # calculate the weight matrix
+    Lap = Laplacian_matrix(x_data)
+
+    kernel = Laplacian_kernel(Lap, labeled_index)
+    kernel_inv = np.linalg.pinv(kernel)
+    a_star = np.dot(kernel_inv, y_labeled)
+
+    V = 0
+    for i in range(labeled_index.shape[0]):
+        V += a_star[i] * np.dot(e(labeled_index[i], data.shape[0]).T, np.linalg.pinv(Lap)) 
+
+    V[V > 0] = 1
+    V[V <= 0] = 3
+    print(V)
+    errors = (V - y_true_label)
+    errors[errors != 0] = 1
+    print(np.sum(errors))
+    return
+
+def LaplacianKernelInterpolation1(data, labeled_index):
+    """
+    For two classes 1, 3 +0
+    """
+    # splitting the data
+    x_data = data[:, 1:]
+    y_true_label = data[:, 0]
+    # getting the labeled y
+    y_filter = np.ones(data.shape[0]).astype(bool)
+    y_filter[labeled_index] = 0
+    y_labeled = y_true_label
+    y_labeled[y_filter] = 0
+    # turn classes into +-1
+    y_labeled[y_labeled == 1] = -1
+    y_labeled[y_labeled == 3] = 1
+    print(labeled_index)
+    print(y_labeled)
+
+    # calculate the weight matrix
+    Lap = Laplacian_matrix(x_data)
+
+    kernel = Laplacian_kernel1(Lap, labeled_index)
+    kernel_inv = np.linalg.pinv(kernel)
+    a_star = np.dot(kernel_inv, y_labeled)
+    print(a_star)
+    V = 0
+    for i in range(labeled_index.shape[0]):
+        print(a_star[labeled_index[i]])
+        V += a_star[labeled_index[i]] * np.dot(e(labeled_index[i], data.shape[0]), np.linalg.pinv(Lap)) 
+    
+    V[V > 0] = 3
+    V[V <= 0] = 1
+    print(V)
+    errors = (V - y_true_label)
     return
 
 def Part_2():
@@ -120,5 +228,11 @@ def Part_2():
             std_errors = np.std(total_errors)
             print("dataset ", index, "L = ", l, "error = ", mean_errors, " +- ", std_errors)
 
+def tryout():
+    data1 = np.loadtxt('Data\dtrain13_50.dat')
+    sampled_index = sample_wo_replacement(data1, [1, 3], 16)
+    sampled_index = np.sort(sampled_index)
+    LaplacianKernelInterpolation(data1, sampled_index)
+
 if __name__ == "__main__":
-    Part_2()
+    tryout()
