@@ -54,9 +54,12 @@ def knn(graph, k=3):
         # sorting a list wrt distance and get the first k elements
         dist = eucledian(graph, graph[i])
         # get the first k+1 ones, so that all k neighbors except the first one with itself
-        index = np.argsort(dist)[0:k+1]
-        index = index[1:]
-        weight_matrix[i,index] += 1
+        index = np.argsort(dist)[1:k+1]
+
+        weight_matrix[i, index] = 1
+        for j in range(index.size):
+            if weight_matrix[index[j], i] != 1:
+                weight_matrix[index[j], i] = 1
 
     return weight_matrix
 
@@ -68,20 +71,6 @@ def Laplacian_matrix(graph, k=3):
     diagonal = np.diag(np.sum(weight, axis=1))
     Laplacian = diagonal - weight
     return Laplacian
-
-def Laplacian_kernel1(L, labeled_index):
-    """
-    Retrun the kernel for Laplacian interpolation +0
-    """
-    inverse = np.linalg.pinv(L)
-    # print(np.meshgrid(labeled_index, labeled_index))
-    kernel_matrix = np.zeros((inverse.shape[0], inverse.shape[0]))
-
-    for i in range(labeled_index.shape[0]):
-        for j in range(labeled_index.shape[0]):
-            kernel_matrix[labeled_index[i], labeled_index[j]] = inverse[labeled_index[i], labeled_index[j]]
-
-    return kernel_matrix
 
 def Laplacian_kernel(L, labeled_index):
     """
@@ -148,7 +137,6 @@ def LaplacianKernelInterpolation(data, labeled_index):
     y_labeled = y_true_label[labeled_index]
     y_labeled[y_labeled == 1] = -1
     y_labeled[y_labeled == 3] = 1
-    print(y_labeled)
 
     # calculate the weight matrix
     Lap = Laplacian_matrix(x_data)
@@ -159,51 +147,15 @@ def LaplacianKernelInterpolation(data, labeled_index):
 
     V = 0
     for i in range(labeled_index.shape[0]):
-        V += a_star[i] * np.dot(e(labeled_index[i], data.shape[0]).T, np.linalg.pinv(Lap)) 
+        V += a_star[i] * np.dot(e(labeled_index[i], data.shape[0]), np.linalg.pinv(Lap)) 
 
-    V[V > 0] = 1
-    V[V <= 0] = 3
-    print(V)
-    errors = (V - y_true_label)
-    errors[errors != 0] = 1
-    print(np.sum(errors))
-    return
-
-def LaplacianKernelInterpolation1(data, labeled_index):
-    """
-    For two classes 1, 3 +0
-    """
-    # splitting the data
-    x_data = data[:, 1:]
-    y_true_label = data[:, 0]
-    # getting the labeled y
-    y_filter = np.ones(data.shape[0]).astype(bool)
-    y_filter[labeled_index] = 0
-    y_labeled = y_true_label
-    y_labeled[y_filter] = 0
-    # turn classes into +-1
-    y_labeled[y_labeled == 1] = -1
-    y_labeled[y_labeled == 3] = 1
-    print(labeled_index)
-    print(y_labeled)
-
-    # calculate the weight matrix
-    Lap = Laplacian_matrix(x_data)
-
-    kernel = Laplacian_kernel1(Lap, labeled_index)
-    kernel_inv = np.linalg.pinv(kernel)
-    a_star = np.dot(kernel_inv, y_labeled)
-    print(a_star)
-    V = 0
-    for i in range(labeled_index.shape[0]):
-        print(a_star[labeled_index[i]])
-        V += a_star[labeled_index[i]] * np.dot(e(labeled_index[i], data.shape[0]), np.linalg.pinv(Lap)) 
-    
     V[V > 0] = 3
     V[V <= 0] = 1
-    print(V)
-    errors = (V - y_true_label)
-    return
+
+    wrong_prediction = (V - y_true_label)
+    wrong_prediction[wrong_prediction != 0] = 1
+    errors = np.sum(wrong_prediction)
+    return errors
 
 def Part_2():
     data1 = np.loadtxt('Data\dtrain13_50.dat')
@@ -218,21 +170,22 @@ def Part_2():
         index += 1
         for l in L:
             iteration = 20
-            total_errors = []
+            total_errLI = []
+            total_errLKI = []
             for i in range(iteration):
                 sampled_index = sample_wo_replacement(dataset, [1, 3], l)
+                sampled_index = np.sort(sampled_index)
                 # split the data into features and labels
-                errors = LaplacianInterpolation(dataset, sampled_index)
-                total_errors.append(errors)
-            mean_errors = np.mean(total_errors)
-            std_errors = np.std(total_errors)
-            print("dataset ", index, "L = ", l, "error = ", mean_errors, " +- ", std_errors)
-
-def tryout():
-    data1 = np.loadtxt('Data\dtrain13_50.dat')
-    sampled_index = sample_wo_replacement(data1, [1, 3], 16)
-    sampled_index = np.sort(sampled_index)
-    LaplacianKernelInterpolation(data1, sampled_index)
+                errLI = LaplacianInterpolation(dataset, sampled_index)
+                errLKI = LaplacianKernelInterpolation(dataset, sampled_index)
+                total_errLI.append(errLI)
+                total_errLKI.append(errLKI)
+            mean_errLI = np.mean(total_errLI)
+            std_errLI = np.std(total_errLI)
+            mean_errLKI = np.mean(total_errLKI)
+            std_errLKI = np.std(total_errLKI)
+            print("LI: dataset ", index, "L = ", l, "error = ", mean_errLI, " +- ", std_errLI)
+            print("LKI: dataset ", index, "L = ", l, "error = ", mean_errLKI, " +- ", std_errLKI)
 
 if __name__ == "__main__":
-    tryout()
+    Part_2()
