@@ -279,11 +279,11 @@ class onevone():
         get the mean error for the whole test set
         """
         # run prediction for all the tests and get the wrong ones
+        kernel = poly_kernel(self.X, x_test, self.degree).T
         error = 0
         number_of_tests = x_test.shape[0]
         for i in range(number_of_tests):
-            kernel = poly_kernel(self.X, x_test[i], self.degree)
-            confidence = self.weights.dot(kernel)
+            confidence = self.weights.dot(kernel[i])
             y_hat = self.vote(confidence)
             if y_hat != y_test[i]:
                 error += 1
@@ -529,8 +529,8 @@ def P1Q52(digit_data):
 
             mean_validation_loss[d] = validation_error
         # add the optimal d value to the list
-        optimal_d = np.argmin(mean_validation_loss) + 1
-        optimal_ds.append(optimal_d)
+        optimal_d = float(2)**(-c[np.argmin(mean_validation_loss) + 1])
+        optimal_ds.append(np.argmin(mean_validation_loss) + 1)
 
         # training using the optimal d
         x_full_train = np.array(train)[:,1:]

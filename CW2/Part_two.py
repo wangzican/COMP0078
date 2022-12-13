@@ -164,10 +164,10 @@ def Part_2():
     data4 = np.loadtxt('Data\dtrain13_400.dat')
     Datasets = [data1, data2, data3, data4]
     L = [1, 2, 4, 8, 16]
+    dataset_size = [50, 100, 200, 400]
 
     index = 0
     for dataset in Datasets:
-        index += 1
         for l in L:
             iteration = 20
             total_errLI = []
@@ -178,14 +178,15 @@ def Part_2():
                 # split the data into features and labels
                 errLI = LaplacianInterpolation(dataset, sampled_index)
                 errLKI = LaplacianKernelInterpolation(dataset, sampled_index)
-                total_errLI.append(errLI)
-                total_errLKI.append(errLKI)
+                total_errLI.append(errLI/(2*dataset_size[index] - 2*l))
+                total_errLKI.append(errLKI/(2*dataset_size[index] - 2*l))
             mean_errLI = np.mean(total_errLI)
             std_errLI = np.std(total_errLI)
             mean_errLKI = np.mean(total_errLKI)
             std_errLKI = np.std(total_errLKI)
-            print("LI: dataset ", index, "L = ", l, "error = ", mean_errLI, " +- ", std_errLI)
-            print("LKI: dataset ", index, "L = ", l, "error = ", mean_errLKI, " +- ", std_errLKI)
+            print("LI: dataset ", dataset_size[index], "L = ", l, "error = ", mean_errLI, " +- ", std_errLI)
+            print("LKI: dataset ", dataset_size[index], "L = ", l, "error = ", mean_errLKI, " +- ", std_errLKI)
+        index += 1
 
 if __name__ == "__main__":
     Part_2()
